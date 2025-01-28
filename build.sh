@@ -100,7 +100,7 @@ rm -f "$TMP_COMMUNITY_TAR"
 # ---------------------------------------------------------
 # Adjust these as needed
 REGISTRY="registry.mast.jacotech.net"
-NAMESPACE="jacotech"
+NAMESPACE="jaco-tech"
 REPOSITORY="jt-odoo-docker"
 BRANCH="master"
 
