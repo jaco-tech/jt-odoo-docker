@@ -6,6 +6,9 @@
 **/*.pyc
 **/README.md
 
+odoo/src/odoo/odoo.egg-info
+**/PKG-INFO
+
 # for speeding build of image in dev, you can build a light image
 # without all odoo code source by ignoring the following directory
 # just uncomment following lines
