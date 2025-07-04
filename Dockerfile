@@ -4,7 +4,7 @@ LABEL org.opencontainers.image.authors="jaco.tech"
 
 USER odoo
 
-RUN mkdir -p /odoo/src/odoo
+RUN mkdir -p /odoo/src/odoo /odoo/custom-addons
 # moving lower for better layer caching
 # COPY ./odoo/src/odoo /odoo/src/odoo
 # COPY ./odoo/addons /odoo/odoo/addons
@@ -34,23 +34,33 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# You can define an ARG for the MaxMind license key
-ARG MAXMIND_LICENSE_KEY
+# MaxMind license key should be passed as a build secret
+# Usage: docker build --secret id=maxmind_key,src=maxmind_key.txt .
 
 RUN mkdir -p /usr/share/GeoIP
 
 # Use curl instead of wget:
-    RUN cd /tmp \
-    && curl -SL "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${MAXMIND_LICENSE_KEY}&suffix=tar.gz" \
-       -o GeoLite2-City.tar.gz \
-    && tar --wildcards --strip=1 -vxzf GeoLite2-City.tar.gz -C /usr/share/GeoIP/ GeoLite2*/GeoLite2-City.mmdb \
-    && rm GeoLite2-City.tar.gz
+RUN --mount=type=secret,id=maxmind_key \
+    if [ -f /run/secrets/maxmind_key ]; then \
+        cd /tmp \
+        && curl -SL "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=$(cat /run/secrets/maxmind_key)&suffix=tar.gz" \
+           -o GeoLite2-City.tar.gz \
+        && tar --wildcards --strip=1 -vxzf GeoLite2-City.tar.gz -C /usr/share/GeoIP/ GeoLite2*/GeoLite2-City.mmdb \
+        && rm GeoLite2-City.tar.gz; \
+    else \
+        echo "Warning: MaxMind license key not provided, skipping GeoLite2-City database download"; \
+    fi
 
-RUN cd /tmp \
-    && curl -SL "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${MAXMIND_LICENSE_KEY}&suffix=tar.gz" \
-       -o GeoLite2-Country.tar.gz \
-    && tar --wildcards --strip=1 -vxzf GeoLite2-Country.tar.gz -C /usr/share/GeoIP/ GeoLite2*/GeoLite2-Country.mmdb \
-    && rm GeoLite2-Country.tar.gz
+RUN --mount=type=secret,id=maxmind_key \
+    if [ -f /run/secrets/maxmind_key ]; then \
+        cd /tmp \
+        && curl -SL "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=$(cat /run/secrets/maxmind_key)&suffix=tar.gz" \
+           -o GeoLite2-Country.tar.gz \
+        && tar --wildcards --strip=1 -vxzf GeoLite2-Country.tar.gz -C /usr/share/GeoIP/ GeoLite2*/GeoLite2-Country.mmdb \
+        && rm GeoLite2-Country.tar.gz; \
+    else \
+        echo "Warning: MaxMind license key not provided, skipping GeoLite2-Country database download"; \
+    fi
 
 
 RUN rm -rf /odoo/src/odoo/odoo.egg-info
@@ -71,4 +81,4 @@ RUN /odoo/.venv/bin/pip install -r /odoo/src/requirements.txt
 RUN /odoo/.venv/bin/pip install -e /odoo/src
 
 
-ENV ADDONS_PATH=/odoo/odoo/addons,/odoo/src/addons,/odoo/src/odoo/addons,/odoo/enterprise,/odoo/design-themes
+ENV ADDONS_PATH=/odoo/custom-addons,/odoo/odoo/addons,/odoo/src/addons,/odoo/src/odoo/addons,/odoo/enterprise,/odoo/design-themes
